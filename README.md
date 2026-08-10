@@ -3,7 +3,7 @@
 [![100% Offline](https://img.shields.io/badge/Offline-100%25%20Private%20%26%20Local-success?style=flat-square&logo=browser)](index.html)
 [![Electron 31](https://img.shields.io/badge/Desktop-Electron%2031-blue?style=flat-square&logo=electron)](main.js)
 [![Bun Supported](https://img.shields.io/badge/Runtime-Bun%20%2F%20Node.js-orange?style=flat-square&logo=bun)](package.json)
-[![OpenEXR Support](https://img.shields.io/badge/Formats-PNG%20%7C%20JPG%20%7C%20WebP%20%7C%20BMP%20%7C%20EXR-purple?style=flat-square)](_files/exr-loader.js)
+[![OpenEXR Support](https://img.shields.io/badge/Formats-PNG%20%7C%20JPG%20%7C%20WebP%20%7C%20BMP%20%7C%20EXR-purple?style=flat-square)](assets/exr-loader.js)
 [![Platform Linux Windows](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows-green?style=flat-square)](packaging/README.md)
 [![AI Generated](https://img.shields.io/badge/Codebase-100%25%20AI%20Generated-red?style=flat-square)](#-ai-generated-disclaimer--no-support-notice)
 
@@ -79,7 +79,7 @@ TextureToolSet/
 ├── .gitattributes          # Line-ending normalizations & binary file declarations
 ├── README.md               # Project documentation (this file)
 │
-├── _files/                 # Core Web Application Assets & Logic
+├── assets/                 # Core Web Application Assets & Logic
 │   ├── script.js           # Core JavaScript logic (RGBA Packer, Normal Converter, Height-to-Normal)
 │   ├── styles.css          # UI styles, CSS variables, dark theme, and grid layouts
 │   ├── exr-loader.js       # OpenEXR (.exr) 16/32-bit floating point parser & decoder

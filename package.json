@@ -19,7 +19,7 @@
     "productName": "RGBA Channel Packer",
     "files": [
       "index.html",
-      "_files/**/*",
+      "assets/**/*",
       "main.js"
     ],
     "directories": {
