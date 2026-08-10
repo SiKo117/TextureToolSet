@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGBA Channel Packer - Offline Texture Packer</title>
+    <meta name="description" content="100% Offline texture channel packer. Pack single or multiple texture sets into RGBA channels and convert normal maps locally in your browser. Supports PNG, JPG, WebP, BMP, and OpenEXR (.exr) files.">
+    <link rel="stylesheet" href="./_files/styles.css">
+    <script src="./_files/jszip.min.js" defer></script>
+    <script src="./_files/exr-loader.js" defer></script>
+    <script src="./_files/script.js" defer></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1 class="brand-title">
+                <span class="brand-icon">🎨</span> RGBA Channel Packer
+            </h1>
+            <p class="brand-subtitle">Combine grayscale textures into RGBA channels and convert normal maps for game engines</p>
+            <div class="offline-badge">100% Offline & Private • EXR Support Enabled</div>
+
+            <!-- Mode Switcher Nav -->
+            <nav class="mode-nav" aria-label="Mode Selector">
+                <button type="button" class="mode-btn active" data-mode="single">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    Single Mode
+                </button>
+                <button type="button" class="mode-btn" data-mode="bulk">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                    Bulk Batch Mode
+                </button>
+                <button type="button" class="mode-btn" data-mode="normal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10h-10V2z"/></svg>
+                    Normal Map Converter
+                </button>
+                <button type="button" class="mode-btn" data-mode="h2n">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20M7 7l10 10M17 7L7 17"/></svg>
+                    Height-to-Normal Generator
+                </button>
+                <button type="button" class="mode-btn" data-mode="splitter">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Channel Splitter
+                </button>
+                <button type="button" class="mode-btn" data-mode="info">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Info & Standards
+                </button>
+            </nav>
+        </header>
+
+        <!-- Main Card -->
+        <main class="app-card">
+
+            <!-- Global Default Missing Channel Handling Settings -->
+            <section class="config-section" id="global-config-section">
+                <h2 class="section-title" style="margin-bottom: 1rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Global Missing Channel Defaults
+                </h2>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label for="rgb-fill">Unassigned RGB Channels:</label>
+                        <select id="rgb-fill" class="select-control">
+                            <option value="0" selected>Fill with Black (0)</option>
+                            <option value="255">Fill with White (255)</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label for="alpha-fill">Unassigned Alpha Channel:</label>
+                        <select id="alpha-fill" class="select-control">
+                            <option value="255" selected>Fill with Opaque White (255)</option>
+                            <option value="0">Fill with Transparent Black (0)</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SINGLE TEXTURE MODE PANEL -->
+            <div id="single-view" class="view-panel">
+                <section>
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Input Texture Channels
+                    </h2>
+
+                    <div class="channels-grid">
+                        <!-- Red Channel -->
+                        <div class="channel-card" data-channel="red">
+                            <div class="channel-header">
+                                <div class="channel-tag">
+                                    <span class="channel-badge">R</span>
+                                    <span>Red Channel</span>
+                                </div>
+                                <button type="button" class="btn-clear" title="Clear Red Channel" aria-label="Clear Red Channel">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                            </div>
+                            <div class="drop-zone">
+                                <div class="drop-icon">📁</div>
+                                <div class="drop-text"><strong>Choose Image</strong> or Drag & Drop</div>
+                                <div class="drop-hint">PNG, JPG, WebP, BMP, EXR</div>
+                            </div>
+                            <input type="file" accept="image/*,.exr" aria-label="Upload Red Channel Image">
+                            <div class="preview-container" style="display: none;"></div>
+                            
+                            <div class="channel-options">
+                                <label class="toggle-label">
+                                    <input type="checkbox" class="chk-invert" aria-label="Invert Red Channel">
+                                    Invert channel
+                                </label>
+                                <div class="custom-fill-box">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" class="chk-custom-fill" aria-label="Use custom fill value for missing red channel">
+                                        Custom fill
+                                    </label>
+                                    <div class="slider-fill-container">
+                                        <span class="color-swatch" style="background-color: rgb(0, 0, 0);" title="Grayscale color preview"></span>
+                                        <input type="range" class="input-custom-slider" min="0" max="255" value="0" disabled aria-label="Custom fill range slider (0-255)">
+                                        <span class="slider-val-text">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Green Channel -->
+                        <div class="channel-card" data-channel="green">
+                            <div class="channel-header">
+                                <div class="channel-tag">
+                                    <span class="channel-badge">G</span>
+                                    <span>Green Channel</span>
+                                </div>
+                                <button type="button" class="btn-clear" title="Clear Green Channel" aria-label="Clear Green Channel">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                            </div>
+                            <div class="drop-zone">
+                                <div class="drop-icon">📁</div>
+                                <div class="drop-text"><strong>Choose Image</strong> or Drag & Drop</div>
+                                <div class="drop-hint">PNG, JPG, WebP, BMP, EXR</div>
+                            </div>
+                            <input type="file" accept="image/*,.exr" aria-label="Upload Green Channel Image">
+                            <div class="preview-container" style="display: none;"></div>
+                            
+                            <div class="channel-options">
+                                <label class="toggle-label">
+                                    <input type="checkbox" class="chk-invert" aria-label="Invert Green Channel">
+                                    Invert channel
+                                </label>
+                                <div class="custom-fill-box">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" class="chk-custom-fill" aria-label="Use custom fill value for missing green channel">
+                                        Custom fill
+                                    </label>
+                                    <div class="slider-fill-container">
+                                        <span class="color-swatch" style="background-color: rgb(0, 0, 0);" title="Grayscale color preview"></span>
+                                        <input type="range" class="input-custom-slider" min="0" max="255" value="0" disabled aria-label="Custom fill range slider (0-255)">
+                                        <span class="slider-val-text">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Blue Channel -->
+                        <div class="channel-card" data-channel="blue">
+                            <div class="channel-header">
+                                <div class="channel-tag">
+                                    <span class="channel-badge">B</span>
+                                    <span>Blue Channel</span>
+                                </div>
+                                <button type="button" class="btn-clear" title="Clear Blue Channel" aria-label="Clear Blue Channel">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                            </div>
+                            <div class="drop-zone">
+                                <div class="drop-icon">📁</div>
+                                <div class="drop-text"><strong>Choose Image</strong> or Drag & Drop</div>
+                                <div class="drop-hint">PNG, JPG, WebP, BMP, EXR</div>
+                            </div>
+                            <input type="file" accept="image/*,.exr" aria-label="Upload Blue Channel Image">
+                            <div class="preview-container" style="display: none;"></div>
+                            
+                            <div class="channel-options">
+                                <label class="toggle-label">
+                                    <input type="checkbox" class="chk-invert" aria-label="Invert Blue Channel">
+                                    Invert channel
+                                </label>
+                                <div class="custom-fill-box">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" class="chk-custom-fill" aria-label="Use custom fill value for missing blue channel">
+                                        Custom fill
+                                    </label>
+                                    <div class="slider-fill-container">
+                                        <span class="color-swatch" style="background-color: rgb(0, 0, 0);" title="Grayscale color preview"></span>
+                                        <input type="range" class="input-custom-slider" min="0" max="255" value="0" disabled aria-label="Custom fill range slider (0-255)">
+                                        <span class="slider-val-text">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alpha Channel -->
+                        <div class="channel-card" data-channel="alpha">
+                            <div class="channel-header">
+                                <div class="channel-tag">
+                                    <span class="channel-badge">A</span>
+                                    <span>Alpha Channel</span>
+                                </div>
+                                <button type="button" class="btn-clear" title="Clear Alpha Channel" aria-label="Clear Alpha Channel">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                            </div>
+                            <div class="drop-zone">
+                                <div class="drop-icon">📁</div>
+                                <div class="drop-text"><strong>Choose Image</strong> or Drag & Drop</div>
+                                <div class="drop-hint">PNG, JPG, WebP, BMP, EXR</div>
+                            </div>
+                            <input type="file" accept="image/*,.exr" aria-label="Upload Alpha Channel Image">
+                            <div class="preview-container" style="display: none;"></div>
+                            
+                            <div class="channel-options">
+                                <label class="toggle-label">
+                                    <input type="checkbox" class="chk-invert" aria-label="Invert Alpha Channel">
+                                    Invert channel
+                                </label>
+                                <div class="custom-fill-box">
+                                    <label class="toggle-label">
+                                        <input type="checkbox" class="chk-custom-fill" aria-label="Use custom fill value for missing alpha channel">
+                                        Custom fill
+                                    </label>
+                                    <div class="slider-fill-container">
+                                        <span class="color-swatch" style="background-color: rgb(255, 255, 255);" title="Grayscale color preview"></span>
+                                        <input type="range" class="input-custom-slider" min="0" max="255" value="255" disabled aria-label="Custom fill range slider (0-255)">
+                                        <span class="slider-val-text">255</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Action Controls -->
+                <div class="action-bar">
+                    <button type="button" class="btn-primary" data-action="pack" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        Pack Channels
+                    </button>
+                    <div id="pack-status" class="status-hint">Requires at least 2 channel images (0/2 selected)</div>
+                </div>
+
+                <!-- Result Output Section -->
+                <section id="result-section" class="result-section" style="display: none;">
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                        Packed RGBA Texture
+                    </h2>
+
+                    <div class="result-card">
+                        <div id="canvas-wrapper" class="canvas-wrapper"></div>
+                        <div class="result-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Resolution</span>
+                                <span id="res-dimensions" class="detail-value">0 × 0 px</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Active Channels</span>
+                                <span id="res-channels" class="detail-value">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Filled Channels</span>
+                                <span id="res-missing" class="detail-value">-</span>
+                            </div>
+                        </div>
+
+                        <div class="result-actions">
+                            <button type="button" class="btn-download" data-action="download">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Download PNG
+                            </button>
+                            <button type="button" class="btn-secondary" data-action="copy">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                Copy Image
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- BULK BATCH MODE PANEL -->
+            <div id="bulk-view" class="view-panel" style="display: none;">
+                <!-- Bulk Toolbar -->
+                <div class="bulk-toolbar">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button type="button" class="btn-secondary" data-action="bulk-add">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            + Add Texture Set
+                        </button>
+                        <button type="button" class="btn-secondary" data-action="bulk-collapse-toggle">
+                            Collapse All
+                        </button>
+                    </div>
+                    <div class="bulk-toolbar-actions">
+                        <button type="button" class="btn-primary" data-action="bulk-pack">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            Pack All Sets
+                        </button>
+                        <button type="button" class="btn-download" data-action="bulk-zip" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download All (ZIP)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sets List Container -->
+                <div id="bulk-sets-container" class="bulk-sets-list"></div>
+            </div>
+
+            <!-- NORMAL MAP CONVERTER BATCH PANEL -->
+            <div id="normal-view" class="view-panel" style="display: none;">
+                <!-- Normal Map Converter Config Bar -->
+                <section class="config-section" style="margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 1rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10h-10V2z"/></svg>
+                        Normal Map Format Conversion Mode
+                    </h2>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label for="normal-mode-preset">Preset Mode:</label>
+                            <select id="normal-mode-preset" class="select-control">
+                                <option value="dx-to-gl" selected>DirectX ➔ OpenGL (Invert Green Y- channel)</option>
+                                <option value="gl-to-dx">OpenGL ➔ DirectX (Invert Green Y+ channel)</option>
+                                <option value="custom">Custom Channel Inversion</option>
+                            </select>
+                        </div>
+                        <div class="config-item" style="justify-content: center;">
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="norm-inv-green" checked> Invert Green (Y)
+                                </label>
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="norm-inv-red"> Invert Red (X)
+                                </label>
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="norm-inv-blue"> Invert Blue (Z)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Bulk Drop Zone for Normal Maps -->
+                <div class="normal-drop-zone" id="normal-drop-zone">
+                    <div class="drop-icon">🗺️</div>
+                    <div class="drop-text"><strong>Choose Normal Maps</strong> or Drag & Drop Multiple Files</div>
+                    <div class="drop-hint">Upload DirectX (Y-) or OpenGL (Y+) textures in PNG, JPG, WebP, BMP, EXR</div>
+                    <input type="file" id="normal-file-input" multiple accept="image/*,.exr">
+                </div>
+
+                <!-- Normal Batch Toolbar & Queue List -->
+                <div class="bulk-toolbar" style="margin-top: 1.5rem;">
+                    <div id="normal-queue-count" class="status-hint" style="font-weight: 700;">Queue: 0 normal maps</div>
+                    <div class="bulk-toolbar-actions">
+                        <button type="button" class="btn-primary" id="btn-normal-convert-all" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Convert All Normal Maps
+                        </button>
+                        <button type="button" class="btn-download" id="btn-normal-zip" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download All (ZIP)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Normal Map Queue List -->
+                <div id="normal-queue-container" class="bulk-sets-list" style="margin-top: 1rem;"></div>
+            </div>
+
+            <!-- HEIGHT TO NORMAL GENERATOR BATCH PANEL -->
+            <div id="h2n-view" class="view-panel" style="display: none;">
+                <!-- H2N Configuration Bar -->
+                <section class="config-section" style="margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 1rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20M7 7l10 10M17 7L7 17"/></svg>
+                        Height-to-Normal Generator Settings
+                    </h2>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label for="h2n-preset">Format Standard:</label>
+                            <select id="h2n-preset" class="select-control">
+                                <option value="opengl" selected>OpenGL Format (Y+ Normal)</option>
+                                <option value="directx">DirectX Format (Y- Inverted Green)</option>
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label for="h2n-strength-slider">Normal Bump Strength (<span id="h2n-strength-val">5.0</span>x):</label>
+                            <div class="slider-fill-container" style="margin-top: 0.2rem;">
+                                <input type="range" id="h2n-strength-slider" min="0.5" max="25" step="0.5" value="5.0" class="input-custom-slider" style="height: 6px;">
+                            </div>
+                        </div>
+                        <div class="config-item" style="justify-content: center;">
+                            <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="h2n-invert-height"> Invert Height Map (Valleys ↔ Peaks)
+                                </label>
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="h2n-wrap-edges" checked> Seamless Edge Wrapping
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Bulk Drop Zone for Height Maps -->
+                <div class="normal-drop-zone" id="h2n-drop-zone">
+                    <div class="drop-icon">🏔️</div>
+                    <div class="drop-text"><strong>Choose Height / Displacement Maps</strong> or Drag &amp; Drop Multiple Files</div>
+                    <div class="drop-hint">Upload grayscale height maps in PNG, JPG, WebP, BMP, EXR to generate tangent space normal maps</div>
+                    <input type="file" id="h2n-file-input" multiple accept="image/*,.exr">
+                </div>
+
+                <!-- H2N Batch Toolbar & Queue List -->
+                <div class="bulk-toolbar" style="margin-top: 1.5rem;">
+                    <div id="h2n-queue-count" class="status-hint" style="font-weight: 700;">Queue: 0 heightmaps</div>
+                    <div class="bulk-toolbar-actions">
+                        <button type="button" class="btn-primary" id="btn-h2n-generate-all" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Generate All Normal Maps
+                        </button>
+                        <button type="button" class="btn-download" id="btn-h2n-zip" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download All (ZIP)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- H2N Queue List -->
+                <div id="h2n-queue-container" class="bulk-sets-list" style="margin-top: 1rem;"></div>
+            </div>
+
+            <!-- CHANNEL SPLITTER PANEL -->
+            <div id="splitter-view" class="view-panel" style="display: none;">
+                <!-- Splitter Drop Zone -->
+                <div class="normal-drop-zone" id="splitter-drop-zone">
+                    <div class="drop-icon">🔬</div>
+                    <div class="drop-text"><strong>Choose Packed RGBA Textures</strong> or Drag &amp; Drop Multiple Files</div>
+                    <div class="drop-hint">Upload channel-packed RGBA textures (PNG, JPG, WebP, BMP, EXR) to extract individual R, G, B, A channels</div>
+                    <input type="file" id="splitter-file-input" multiple accept="image/*,.exr">
+                </div>
+
+                <!-- Splitter Batch Toolbar -->
+                <div class="bulk-toolbar" style="margin-top: 1.5rem;">
+                    <div id="splitter-queue-count" class="status-hint" style="font-weight: 700;">Queue: 0 textures</div>
+                    <div class="bulk-toolbar-actions">
+                        <button type="button" class="btn-primary" id="btn-splitter-split-all" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                            Split All Textures
+                        </button>
+                        <button type="button" class="btn-download" id="btn-splitter-zip" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download All (ZIP)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Splitter Queue List -->
+                <div id="splitter-queue-container" class="bulk-sets-list" style="margin-top: 1rem;"></div>
+            </div>
+
+            <!-- PREVIEW MODAL OVERLAY -->
+            <div id="preview-modal" class="preview-modal-overlay" style="display: none;">
+                <div class="preview-modal-content">
+                    <div class="preview-modal-header">
+                        <h3 id="preview-modal-title">Packed Texture Preview</h3>
+                        <button type="button" class="btn-remove-set" id="preview-modal-close" title="Close Preview">✕</button>
+                    </div>
+                    <div id="preview-modal-canvas-wrapper" class="canvas-wrapper" style="max-height: 500px; display: flex; align-items: center; justify-content: center;"></div>
+                </div>
+            </div>
+
+            <!-- INFO & INDUSTRY STANDARDS PANEL -->
+            <div id="info-view" class="view-panel" style="display: none;">
+                <section class="info-card">
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        What is Texture Channel Packing?
+                    </h2>
+                    <p class="info-text">
+                        <strong>Channel Packing</strong> is an industry-standard optimization technique used in game development (Unreal Engine, Unity, Godot) and real-time 3D rendering. Instead of loading separate 8-bit grayscale image files for Ambient Occlusion, Roughness, Metallic, and Height, artists bundle up to 4 grayscale images into the <strong>Red (R), Green (G), Blue (B), and Alpha (A)</strong> channels of a single 32-bit RGBA texture.
+                    </p>
+                    
+                    <div class="info-benefits-grid">
+                        <div class="benefit-card">
+                            <span class="benefit-icon">⚡</span>
+                            <h4>Draw Call & VRAM Reduction</h4>
+                            <p>Bundling 3-4 grayscale textures into 1 PNG/TGA cuts texture fetch calls, lowers VRAM overhead, and improves GPU cache coherence.</p>
+                        </div>
+                        <div class="benefit-card">
+                            <span class="benefit-icon">📦</span>
+                            <h4>Smaller Build Sizes</h4>
+                            <p>Fewer image headers and unified GPU block compression (BC7 / DXT5) significantly reduce overall game asset disk size.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="info-card" style="margin-top: 1.5rem;">
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Popular Industry Standard Layouts
+                    </h2>
+
+                    <div class="standards-table-wrapper">
+                        <table class="standards-table">
+                            <thead>
+                                <tr>
+                                    <th>Standard Name</th>
+                                    <th><span class="channel-badge" style="background: var(--channel-red); display:inline-flex;">R</span> Red</th>
+                                    <th><span class="channel-badge" style="background: var(--channel-green); display:inline-flex;">G</span> Green</th>
+                                    <th><span class="channel-badge" style="background: var(--channel-blue); display:inline-flex;">B</span> Blue</th>
+                                    <th><span class="channel-badge" style="background: var(--channel-alpha); display:inline-flex;">A</span> Alpha</th>
+                                    <th>Target Engines</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>ORM / RMA</strong></td>
+                                    <td>Ambient Occlusion (AO)</td>
+                                    <td>Roughness</td>
+                                    <td>Metallic</td>
+                                    <td>Height / Opacity (Optional)</td>
+                                    <td><span class="engine-tag">glTF 2.0</span> <span class="engine-tag">Unreal Engine</span> <span class="engine-tag">Godot</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Unity Mask Map</strong></td>
+                                    <td>Metallic</td>
+                                    <td>Ambient Occlusion (AO)</td>
+                                    <td>Detail Mask</td>
+                                    <td>Smoothness (1.0 - Roughness)</td>
+                                    <td><span class="engine-tag">Unity HDRP</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Unreal MRAO</strong></td>
+                                    <td>Metallic</td>
+                                    <td>Roughness</td>
+                                    <td>Ambient Occlusion (AO)</td>
+                                    <td>Height / Displacement</td>
+                                    <td><span class="engine-tag">Unreal Engine 4/5</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Terrain Splat Map</strong></td>
+                                    <td>Layer 1 Weight</td>
+                                    <td>Layer 2 Weight</td>
+                                    <td>Layer 3 Weight</td>
+                                    <td>Layer 4 Weight</td>
+                                    <td><span class="engine-tag">General Shaders</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="info-card" style="margin-top: 1.5rem;">
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        Important Production Tips
+                    </h2>
+                    <ul class="tips-list">
+                        <li>
+                            <strong>Linear Color Space (sRGB OFF):</strong> Always ensure channel-packed textures are imported as <strong>Linear / sRGB = False</strong> in game engines. Gamma correction distorts numerical Roughness and Metallic values!
+                        </li>
+                        <li>
+                            <strong>Smoothness vs. Roughness Inversion:</strong> Unity uses <em>Smoothness</em> while Unreal/glTF uses <em>Roughness</em>. Smoothness is simply the exact inverted value of Roughness ($Smoothness = 255 - Roughness$). Use our <strong>"Invert channel"</strong> checkbox to convert easily!
+                        </li>
+                        <li>
+                            <strong>Green Channel Quality:</strong> Human eyes are most sensitive to green light, so GPU texture compression (like BC1/DXT1) allocates 6 bits to the Green channel vs 5 bits to Red/Blue. Place your most detail-critical map (like Roughness) in the <strong>Green Channel</strong>!
+                        </li>
+                        <li>
+                            <strong>OpenEXR (.exr) Support:</strong> OpenEXR 16-bit/32-bit floating-point maps are decoded 100% offline in browser memory.
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="info-card" style="margin-top: 1.5rem;">
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        External Specification & Standard References
+                    </h2>
+                    <div class="links-grid">
+                        <a href="https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#materials" target="_blank" rel="noopener noreferrer" class="external-link-card">
+                            <div class="link-title">Khronos glTF 2.0 PBR Specification ↗</div>
+                            <div class="link-desc">Official PBR material standard defining ORM (Occlusion, Roughness, Metallic) packing.</div>
+                        </a>
+                        <a href="https://dev.epicgames.com/documentation/en-us/unreal-engine/textures-in-unreal-engine" target="_blank" rel="noopener noreferrer" class="external-link-card">
+                            <div class="link-title">Unreal Engine Texture Packing Guide ↗</div>
+                            <div class="link-desc">Epic Games official documentation on channel packing and texture sampler setup.</div>
+                        </a>
+                        <a href="https://docs.unity3d.com/Packages/com.unity.render-pipelines.high-definition@latest/index.html?subtopic=manual/Mask-Map-naming-convention.html" target="_blank" rel="noopener noreferrer" class="external-link-card">
+                            <div class="link-title">Unity HDRP Mask Map Standard ↗</div>
+                            <div class="link-desc">Unity documentation for High Definition Render Pipeline Mask Map channel layout.</div>
+                        </a>
+                        <a href="https://substance3d.adobe.com/documentation/spdoc/channel-packing-172823756.html" target="_blank" rel="noopener noreferrer" class="external-link-card">
+                            <div class="link-title">Substance 3D Painter Channel Packing ↗</div>
+                            <div class="link-desc">Adobe Substance guide for exporting custom packed RGBA textures for real-time engines.</div>
+                        </a>
+                    </div>
+                </section>
+
+                <section class="info-card" style="margin-top: 1.5rem; border-left: 4px solid #ef4444;">
+                    <h2 class="section-title" style="color: #f87171;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        Project Disclaimer & Maintenance Notice
+                    </h2>
+                    <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">
+                        <strong>100% AI-Generated Software:</strong> This entire project, UI, logic, scripts, desktop wrappers, and documentation were generated automatically by Artificial Intelligence. 
+                        The author/creator provides no maintenance, bug fixes, updates, support, or warranty of any kind. Software is provided <em>"AS IS"</em> for use at your own risk.
+                    </p>
+                </section>
+            </div>
+
+        </main>
+    </div>
+</body>
+</html>

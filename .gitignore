@@ -1,0 +1,110 @@
+# ==========================================
+# TextureToolSet / RGBA Channel Packer .gitignore
+# ==========================================
+
+# Dependency Directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Bun & Package Manager Caches / Lock files
+.bun/
+bun.lockb
+.npm
+.yarn/
+.pnpm-store
+
+# Electron & Desktop Build Outputs
+dist/
+out/
+build/
+release/
+packaging/dist/
+
+# Standalone Compiled Binaries & Packages
+*.AppImage
+*.deb
+*.exe
+*.dmg
+*.zip
+*.snap
+*.tar.gz
+*.rpm
+
+# Tauri / Rust Build Outputs
+src-tauri/target/
+src-tauri/gen/
+
+# Logs & Diagnostics
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Diagnostic & Performance Data
+.node_repl_history
+*.cpuprofile
+*.heapsnapshot
+
+# Temporary Files & Directories
+tmp/
+.tmp/
+temp/
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Operating System Files
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+# Linux
+*~
+.fuse_hidden*
+.directory
+
+# IDEs and Text Editors
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# VS Code (ignore workspace state, allow shared launch/settings if needed)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env

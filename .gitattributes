@@ -1,2 +1,35 @@
+# ==========================================
+# TextureToolSet / RGBA Channel Packer .gitattributes
+# ==========================================
+
 # Auto detect text files and perform LF normalization
-* text=auto
+* text=auto eol=lf
+
+# Explicitly declare text files that must use LF line endings
+*.js text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.sh text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Explicitly declare Windows scripts that must use CRLF line endings
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary formats - treat as binary data (no line ending conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.bmp binary
+*.exr binary
+*.ico binary
+*.icns binary
+*.AppImage binary
+*.deb binary
+*.exe binary
