@@ -1,10 +1,10 @@
 {
-  "name": "rgba-channel-packer",
+  "name": "texture-toolset",
   "version": "1.0.0",
-  "description": "100% Offline RGBA Texture Channel Packer & Normal Map Converter Standalone Desktop App",
+  "description": "100% Offline Texture ToolSet - Channel Packer, Normal Map Converter, Height Generator & Seamless Checker",
   "main": "main.js",
-  "author": "RGBA Packer Team <contact@channelpacker.app>",
-  "homepage": "https://github.com/channelpacker/rgba-channel-packer",
+  "author": "Texture ToolSet Team <contact@texturetoolset.app>",
+  "homepage": "https://github.com/texturetoolset/texture-toolset",
   "private": true,
   "type": "commonjs",
   "scripts": {
@@ -15,8 +15,8 @@
     "build:win": "electron-builder --win nsis portable"
   },
   "build": {
-    "appId": "com.channelpacker.app",
-    "productName": "RGBA Channel Packer",
+    "appId": "com.texturetoolset.app",
+    "productName": "Texture ToolSet",
     "files": [
       "index.html",
       "assets/**/*",
@@ -31,7 +31,7 @@
         "deb"
       ],
       "category": "Graphics",
-      "maintainer": "RGBA Packer Team <contact@channelpacker.app>"
+      "maintainer": "Texture ToolSet Team <contact@texturetoolset.app>"
     },
     "win": {
       "target": [

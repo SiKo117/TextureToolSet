@@ -7,7 +7,7 @@ function createWindow() {
         height: 850,
         minWidth: 800,
         minHeight: 600,
-        title: "RGBA Channel Packer & Normal Map Converter",
+        title: "Texture ToolSet",
         autoHideMenuBar: true,
         webPreferences: {
             nodeIntegration: false,

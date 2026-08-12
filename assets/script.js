@@ -33,6 +33,16 @@ class RGBAChannelPacker {
     #splitterQueue = [];
     #splitterCounter = 0;
 
+    // Seamless Checker State
+    #seamlessImage = null;
+    #seamlessFile = null;
+    #seamlessPanX = 0;
+    #seamlessPanY = 0;
+    #seamlessScale = 1.0;
+    #isDraggingSeamless = false;
+    #seamlessDragStart = { x: 0, y: 0 };
+    #seamlessPanStart = { x: 0, y: 0 };
+
     constructor() {
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.init());
@@ -50,13 +60,14 @@ class RGBAChannelPacker {
             this.setupNormalModeEventListeners();
             this.setupH2NModeEventListeners();
             this.setupSplitterModeEventListeners();
+            this.setupSeamlessModeEventListeners();
             this.setupPreviewModal();
             
             // Add initial default sets in Bulk Mode
             this.addBulkSet();
             this.addBulkSet();
 
-            console.info('RGBA Channel Packer (All Modes & Height-to-Normal Generator) Ready.');
+            console.info('Texture ToolSet (All Modes & Seamless Checker) Ready.');
         } catch (err) {
             this.showToast(`Initialization failed: ${err.message}`, 'error');
             console.error('Init error:', err);
@@ -79,6 +90,7 @@ class RGBAChannelPacker {
         const normalView = document.getElementById('normal-view');
         const h2nView = document.getElementById('h2n-view');
         const splitterView = document.getElementById('splitter-view');
+        const seamlessView = document.getElementById('seamless-view');
         const infoView = document.getElementById('info-view');
         const globalConfig = document.getElementById('global-config-section');
 
@@ -95,6 +107,7 @@ class RGBAChannelPacker {
                 if (normalView) normalView.style.display = (mode === 'normal') ? 'block' : 'none';
                 if (h2nView) h2nView.style.display = (mode === 'h2n') ? 'block' : 'none';
                 if (splitterView) splitterView.style.display = (mode === 'splitter') ? 'block' : 'none';
+                if (seamlessView) seamlessView.style.display = (mode === 'seamless') ? 'block' : 'none';
                 if (infoView) infoView.style.display = (mode === 'info') ? 'block' : 'none';
 
                 // Hide global packer missing-channel config when not on packer tabs
@@ -1590,6 +1603,246 @@ class RGBAChannelPacker {
         if (zipBtn) {
             zipBtn.disabled = splitCount === 0;
             zipBtn.textContent = splitCount > 0 ? `Download All (${splitCount} ZIP)` : 'Download All (ZIP)';
+        }
+    }
+
+    // =========================================================================
+    // SEAMLESS CHECKER LOGIC (Interactive Pan & Zoom Viewport)
+    // =========================================================================
+
+    setupSeamlessModeEventListeners() {
+        const uploadBtn = document.getElementById('btn-seamless-upload');
+        const fileInput = document.getElementById('seamless-file-input');
+        const viewportContainer = document.getElementById('seamless-viewport-container');
+        const scaleSlider = document.getElementById('seamless-scale-slider');
+        const guideLinesCheck = document.getElementById('seamless-guide-lines');
+        const resetBtn = document.getElementById('btn-seamless-reset');
+        const downloadBtn = document.getElementById('btn-seamless-download');
+
+        uploadBtn?.addEventListener('click', () => fileInput?.click());
+        fileInput?.addEventListener('change', (e) => this.handleSeamlessFileSelect(e));
+
+        viewportContainer?.addEventListener('click', (e) => {
+            if (!this.#seamlessImage && e.target !== uploadBtn) {
+                fileInput?.click();
+            }
+        });
+
+        scaleSlider?.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            this.#seamlessScale = val / 100;
+            const textEl = document.getElementById('seamless-scale-val');
+            if (textEl) textEl.textContent = `${this.#seamlessScale.toFixed(1)}×`;
+            this.renderSeamlessCanvas();
+        });
+
+        guideLinesCheck?.addEventListener('change', () => this.renderSeamlessCanvas());
+
+        resetBtn?.addEventListener('click', () => {
+            this.#seamlessPanX = 0;
+            this.#seamlessPanY = 0;
+            this.#seamlessScale = 1.0;
+            if (scaleSlider) scaleSlider.value = 100;
+            const textEl = document.getElementById('seamless-scale-val');
+            if (textEl) textEl.textContent = '1.0×';
+            this.renderSeamlessCanvas();
+        });
+
+        downloadBtn?.addEventListener('click', () => this.downloadSeamlessResult());
+
+        // Drag & Drop onto viewport container
+        if (viewportContainer) {
+            this.setupDragAndDrop(viewportContainer, fileInput, async (file) => {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+                await this.handleSeamlessFile(file);
+            });
+
+            // Interactive Pan (MouseDown, MouseMove, MouseUp)
+            viewportContainer.addEventListener('mousedown', (e) => {
+                if (!this.#seamlessImage) return;
+                this.#isDraggingSeamless = true;
+                this.#seamlessDragStart = { x: e.clientX, y: e.clientY };
+                this.#seamlessPanStart = { x: this.#seamlessPanX, y: this.#seamlessPanY };
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!this.#isDraggingSeamless || !this.#seamlessImage) return;
+                const dx = e.clientX - this.#seamlessDragStart.x;
+                const dy = e.clientY - this.#seamlessDragStart.y;
+                this.#seamlessPanX = this.#seamlessPanStart.x + dx;
+                this.#seamlessPanY = this.#seamlessPanStart.y + dy;
+                this.renderSeamlessCanvas();
+            });
+
+            window.addEventListener('mouseup', () => {
+                this.#isDraggingSeamless = false;
+            });
+
+            // Mouse Wheel Zoom
+            viewportContainer.addEventListener('wheel', (e) => {
+                if (!this.#seamlessImage) return;
+                e.preventDefault();
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                let newScale = this.#seamlessScale * zoomFactor;
+                newScale = Math.max(0.15, Math.min(3.0, newScale));
+                this.#seamlessScale = newScale;
+
+                if (scaleSlider) scaleSlider.value = Math.round(newScale * 100);
+                const textEl = document.getElementById('seamless-scale-val');
+                if (textEl) textEl.textContent = `${newScale.toFixed(1)}×`;
+
+                this.renderSeamlessCanvas();
+            }, { passive: false });
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                if (this.#seamlessImage && this.#activeMode === 'seamless') {
+                    this.renderSeamlessCanvas();
+                }
+            });
+        }
+    }
+
+    async handleSeamlessFileSelect(e) {
+        const file = e.target.files?.[0];
+        if (file) await this.handleSeamlessFile(file);
+    }
+
+    async handleSeamlessFile(file) {
+        try {
+            this.validateFile(file);
+            const image = await this.loadImage(file);
+            this.#seamlessFile = file;
+            this.#seamlessImage = image;
+
+            this.#seamlessPanX = 0;
+            this.#seamlessPanY = 0;
+            this.#seamlessScale = 1.0;
+
+            const scaleSlider = document.getElementById('seamless-scale-slider');
+            if (scaleSlider) scaleSlider.value = 100;
+            const textEl = document.getElementById('seamless-scale-val');
+            if (textEl) textEl.textContent = '1.0×';
+
+            const container = document.getElementById('seamless-viewport-container');
+            const emptyOverlay = document.getElementById('seamless-empty-overlay');
+            const canvas = document.getElementById('seamless-canvas');
+            const detailsBar = document.getElementById('seamless-details-bar');
+            const fileNameMeta = document.getElementById('seamless-meta-filename');
+            const dimMeta = document.getElementById('seamless-meta-dim');
+
+            if (container) container.dataset.active = 'true';
+            if (emptyOverlay) emptyOverlay.style.display = 'none';
+            if (canvas) canvas.style.display = 'block';
+            if (detailsBar) detailsBar.style.display = 'flex';
+            if (fileNameMeta) fileNameMeta.textContent = file.name;
+            if (dimMeta) dimMeta.textContent = `${image.width} × ${image.height} px`;
+
+            this.renderSeamlessCanvas();
+            this.showToast(`Loaded "${file.name}" for interactive seamless testing.`, 'success');
+        } catch (err) {
+            this.showToast(`Error loading texture for seamless check: ${err.message}`, 'error');
+        }
+    }
+
+    renderSeamlessCanvas() {
+        if (!this.#seamlessImage) return;
+
+        const container = document.getElementById('seamless-viewport-container');
+        const canvas = document.getElementById('seamless-canvas');
+        if (!container || !canvas) return;
+
+        const rect = container.getBoundingClientRect();
+        const width = Math.max(300, Math.floor(rect.width));
+        const height = Math.max(300, Math.floor(rect.height));
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, width, height);
+
+        const img = this.#seamlessImage;
+        const scale = this.#seamlessScale;
+        const tileW = img.width * scale;
+        const tileH = img.height * scale;
+
+        if (tileW <= 0 || tileH <= 0) return;
+
+        let startX = (this.#seamlessPanX % tileW);
+        if (startX > 0) startX -= tileW;
+        let startY = (this.#seamlessPanY % tileH);
+        if (startY > 0) startY -= tileH;
+
+        const showGuides = document.getElementById('seamless-guide-lines')?.checked ?? false;
+
+        ctx.save();
+
+        const pattern = ctx.createPattern(img, 'repeat');
+        if (pattern) {
+            const matrix = new DOMMatrix();
+            matrix.translateSelf(this.#seamlessPanX, this.#seamlessPanY);
+            matrix.scaleSelf(scale, scale);
+            pattern.setTransform(matrix);
+
+            ctx.fillStyle = pattern;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        if (showGuides) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 4]);
+
+            ctx.beginPath();
+            for (let x = startX; x <= width + tileW; x += tileW) {
+                if (x >= 0 && x <= width) {
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                }
+            }
+            for (let y = startY; y <= height + tileH; y += tileH) {
+                if (y >= 0 && y <= height) {
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                }
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        ctx.restore();
+    }
+
+    async downloadSeamlessResult() {
+        if (!this.#seamlessImage) return;
+        try {
+            const img = this.#seamlessImage;
+            const tileW = img.width;
+            const tileH = img.height;
+
+            const outCanvas = document.createElement('canvas');
+            outCanvas.width = tileW * 3;
+            outCanvas.height = tileH * 3;
+            const ctx = outCanvas.getContext('2d');
+
+            const pattern = ctx.createPattern(img, 'repeat');
+            if (pattern) {
+                ctx.fillStyle = pattern;
+                ctx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+            }
+
+            const blob = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
+            const baseName = this.#seamlessFile ? this.#seamlessFile.name.replace(/\.[^/.]+$/, '') : 'texture';
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${baseName}_seamless_3x3.png`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+            this.showToast('Seamless 3×3 tiled image download started!', 'success');
+        } catch (err) {
+            this.showToast(`Download failed: ${err.message}`, 'error');
         }
     }
 

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RGBA Channel Packer - Offline Texture Packer</title>
-    <meta name="description" content="100% Offline texture channel packer. Pack single or multiple texture sets into RGBA channels and convert normal maps locally in your browser. Supports PNG, JPG, WebP, BMP, and OpenEXR (.exr) files.">
+    <title>Texture ToolSet - 100% Offline Texture Utilities</title>
+    <meta name="description" content="100% Offline texture utilities. Pack RGBA channel textures, convert normal maps, generate height-to-normal maps, split channels, and check seamless texture tiling locally in your browser. Supports PNG, JPG, WebP, BMP, and OpenEXR (.exr) files.">
     <link rel="stylesheet" href="./assets/styles.css">
     <script src="./assets/jszip.min.js" defer></script>
     <script src="./assets/exr-loader.js" defer></script>
@@ -15,10 +15,10 @@
         <!-- Header -->
         <header class="app-header">
             <h1 class="brand-title">
-                <span class="brand-icon">🎨</span> RGBA Channel Packer
+                <span class="brand-icon">🎨</span> Texture ToolSet
             </h1>
-            <p class="brand-subtitle">Combine grayscale textures into RGBA channels and convert normal maps for game engines</p>
-            <div class="offline-badge">100% Offline & Private • EXR Support Enabled</div>
+            <p class="brand-subtitle">Combine grayscale textures, convert normal maps, generate heightmaps &amp; test seamless tiling for game engines</p>
+            <div class="offline-badge">100% Offline &amp; Private • EXR Support Enabled</div>
 
             <!-- Mode Switcher Nav -->
             <nav class="mode-nav" aria-label="Mode Selector">
@@ -42,9 +42,13 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     Channel Splitter
                 </button>
+                <button type="button" class="mode-btn" data-mode="seamless">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+                    Seamless Check
+                </button>
                 <button type="button" class="mode-btn" data-mode="info">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                    Info & Standards
+                    Info &amp; Standards
                 </button>
             </nav>
         </header>
@@ -464,6 +468,62 @@
 
                 <!-- Splitter Queue List -->
                 <div id="splitter-queue-container" class="bulk-sets-list" style="margin-top: 1rem;"></div>
+            </div>
+
+            <!-- SEAMLESS TEXTURE CHECKER PANEL (Interactive pycheung-style) -->
+            <div id="seamless-view" class="view-panel" style="display: none;">
+                <!-- Toolbar Controls -->
+                <div class="seamless-toolbar">
+                    <div class="seamless-tool-group">
+                        <button type="button" class="btn-primary" id="btn-seamless-upload">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            Open / Choose Texture
+                        </button>
+                        <input type="file" id="seamless-file-input" accept="image/*,.exr" style="display: none;">
+                        
+                        <div class="seamless-control-item">
+                            <label for="seamless-scale-slider" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Tile Zoom / Scale:</label>
+                            <input type="range" id="seamless-scale-slider" min="15" max="300" value="100" class="input-custom-slider" style="width: 140px;">
+                            <span id="seamless-scale-val" class="slider-val-text" style="min-width: 42px;">1.0×</span>
+                        </div>
+                    </div>
+
+                    <div class="seamless-tool-group">
+                        <label class="toggle-label" title="Show tile seam guide lines">
+                            <input type="checkbox" id="seamless-guide-lines"> Seam Guides
+                        </label>
+                        <button type="button" class="btn-secondary" id="btn-seamless-reset" title="Reset Offset Pan &amp; Scale">
+                            🎯 Reset View
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Interactive Tiling Viewport Canvas -->
+                <div id="seamless-viewport-container" class="seamless-viewport-wrapper">
+                    <!-- Drop overlay hint when empty -->
+                    <div id="seamless-empty-overlay" class="seamless-empty-hint">
+                        <div class="drop-icon" style="font-size: 3rem; margin-bottom: 0.5rem;">🔄</div>
+                        <h3>Interactive Seamless Texture Checker</h3>
+                        <p style="margin-top: 0.35rem;"><strong>Click to open image</strong> or drag &amp; drop any texture file here</p>
+                        <p class="drop-hint" style="margin-top: 0.5rem;">Supports PNG, JPG, WebP, BMP, EXR • Drag to pan &amp; scroll mouse wheel to scale</p>
+                    </div>
+                    <canvas id="seamless-canvas" style="display: none;"></canvas>
+                </div>
+
+                <!-- Details & Download Bar (visible when image loaded) -->
+                <div id="seamless-details-bar" class="seamless-info-bar" style="display: none;">
+                    <div class="seamless-meta-text">
+                        <span id="seamless-meta-filename"><strong>texture.png</strong></span>
+                        <span id="seamless-meta-dim" class="status-hint">1024 × 1024 px</span>
+                        <span class="status-hint">💡 <em>Click &amp; drag mouse to pan • Scroll wheel to zoom</em></span>
+                    </div>
+                    <div class="result-actions" style="width: auto;">
+                        <button type="button" class="btn-download" id="btn-seamless-download" style="padding: 0.5rem 1.25rem; font-size: 0.875rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download Tiled Image
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- PREVIEW MODAL OVERLAY -->
